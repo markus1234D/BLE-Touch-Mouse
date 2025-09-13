@@ -85,22 +85,22 @@ void setup() {
 
 
 
-    guiWorker.onMouseSpeedChange([](int speed) {
-            mouseWorker.setMouseSpeed(speed);
-    });
-    guiWorker.onScrollspeedChange([](int speed) {
-        mouseWorker.setScrollSpeed(speed);
-    });
+    // guiWorker.onMouseSpeedChange([](int speed) {
+    //         mouseWorker.setMouseSpeed(speed);
+    // });
+    // guiWorker.onScrollspeedChange([](int speed) {
+    //     mouseWorker.setScrollSpeed(speed);
+    // });
     // guiWorker.onBrightnessChange([](int brightness) {
     //     displayWorker.setBrightness(brightness);
     // });
-    guiWorker.onRotationChange([](int rotation) {
-        debugPrint("Rotation: " + String((CST816t_TouchWorker::Rotation)rotation));
-        cst816t_touchWorker.setRotation((CST816t_TouchWorker::Rotation)rotation);
-    });
-    guiWorker.onModeChange([](int mode) {
-        mouseWorker.setMode((MouseWorker::Mode)mode);
-    });
+    // guiWorker.onRotationChange([](int rotation) {
+    //     debugPrint("Rotation: " + String((CST816t_TouchWorker::Rotation)rotation));
+    //     cst816t_touchWorker.setRotation((CST816t_TouchWorker::Rotation)rotation);
+    // });
+    // guiWorker.onModeChange([](int mode) {
+    //     mouseWorker.setMode((MouseWorker::Mode)mode);
+    // });
 }
 
 void loop() {

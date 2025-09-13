@@ -41,13 +41,13 @@ private:
 private:
     void debugPrint(String str);
     void move(int x, int y);
-    void press(int x, int y);
-    void release(int x, int y);
+    void setOrigin(int x, int y);
+    void resetOrigin(int x, int y);
 };
 
 void MouseWorker::debugPrint(String str) {
     #ifdef DEBUG
-        Serial.println(str);
+        Serial.println("[MouseWorker] " + str);
     #endif
 }
 
@@ -60,15 +60,20 @@ void MouseWorker::init() {
     }
     
     functionMap["move"] = std::bind(&MouseWorker::move, this, std::placeholders::_1, std::placeholders::_2);
-    functionMap["press"] = std::bind(&MouseWorker::press, this, std::placeholders::_1, std::placeholders::_2);
-    functionMap["release"] = std::bind(&MouseWorker::release, this, std::placeholders::_1, std::placeholders::_2);
+    functionMap["setOrigin"] = std::bind(&MouseWorker::setOrigin, this, std::placeholders::_1, std::placeholders::_2);
+    functionMap["resetOrigin"] = std::bind(&MouseWorker::resetOrigin, this, std::placeholders::_1, std::placeholders::_2);
+    functionMap["pressLeft"] = std::function<void(int, int)>([](int x, int y) {
+        Serial.println("MouseWorker: Press action triggered at X: " + String(x) + ", Y: " + String(y));
+        Mouse.press(MOUSE_LEFT);
+    });
+    functionMap["releaseLeft"] = std::function<void(int, int)>([](int x, int y) {
+        Serial.println("MouseWorker: Release action triggered at X: " + String(x) + ", Y: " + String(y));
+        Mouse.release(MOUSE_LEFT);
+    });
     functionMap["copy"] = std::function<void(int, int)>([](int x, int y) {
         Serial.println("MouseWorker: Copy action triggered at X: " + String(x) + ", Y: " + String(y));
         Keyboard.press(KEY_LEFT_CTRL);
-        Keyboard.print('c');        Keyboard.press(KEY_LEFT_CTRL);
-        Keyboard.print('v'); // Use write instead of press for paste
-        delay(100);
-        Keyboard.releaseAll();
+        Keyboard.print('c');
         delay(100);
         Keyboard.releaseAll();
     });
@@ -78,6 +83,10 @@ void MouseWorker::init() {
         Keyboard.print('v'); // Use write instead of press for paste
         delay(100);
         Keyboard.releaseAll();
+    });
+    functionMap["click"] = std::function<void(int, int)>([](int x, int y) {
+        Serial.println("MouseWorker: Click action triggered at X: " + String(x) + ", Y: " + String(y));
+        Mouse.click(MOUSE_LEFT);
     });
 }
 
@@ -110,6 +119,7 @@ void MouseWorker::move(int x, int y) {
                 xDiff = x - last_x;
                 yDiff = y - last_y;
                 Mouse.move(xDiff, yDiff, 0);
+                debugPrint("xDiff: " + String(xDiff) + " yDiff: " + String(yDiff));
             }
             last_x = x;
             last_y = y;
@@ -141,7 +151,7 @@ void MouseWorker::move(int x, int y) {
     }
 }
 
-void MouseWorker::press(int x, int y) {
+void MouseWorker::setOrigin(int x, int y) {
     if (mode == JOYSTICK_MODE) {
         xCenter = x;
         yCenter = y;
@@ -149,6 +159,7 @@ void MouseWorker::press(int x, int y) {
     else if(mode == MOUSE_MODE) {
         last_x = x;
         last_y = y;
+        debugPrint("last_x: " + String(last_x) + " last_y: " + String(last_y));
     }
     else if(mode == SCROLL_MODE) {
         xCenter = x;
@@ -157,7 +168,7 @@ void MouseWorker::press(int x, int y) {
     }
 }
 
-void MouseWorker::release(int x, int y) {
+void MouseWorker::resetOrigin(int x, int y) {
     last_x = -1;
     last_y = -1;
     xCenter = -1;

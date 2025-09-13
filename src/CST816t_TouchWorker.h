@@ -3,7 +3,6 @@
 #include <cst816t.h>
 #include "pin_config.h"
 #include <map>
-#include <blecombo.h>
 
 #define DEBUG
 
@@ -29,7 +28,6 @@ public:
     bool setActionFunction(String action, std::function<void(int, int)> callback);
 
 private:
-    void debugPrint(String str);
     bool swipe_read = false;
     bool gesture_timeout = false;
     bool movemnet = true;
@@ -63,6 +61,7 @@ private:
     unsigned long maxGestureTime = 1000;
 
 private:
+    void debugPrint(String str);
     void checkGesture();
     void setXY(uint16_t x, uint16_t y);
 };
@@ -117,8 +116,10 @@ void CST816t_TouchWorker::init() {
     this->callbacks["swipeDown"] = NULL;
     this->callbacks["singleClick"] = NULL;
     this->callbacks["singleClickRelease"] = NULL;
+    this->callbacks["singleClickHold"] = NULL;
     this->callbacks["doubleClick"] = NULL;
     this->callbacks["doubleClickRelease"] = NULL;
+    this->callbacks["doubleClickHold"] = NULL;
     this->callbacks["longPress"] = NULL;
     this->callbacks["longPressRelease"] = NULL;
     this->callbacks["noGesture"] = NULL;
@@ -179,13 +180,30 @@ void CST816t_TouchWorker::handleTouch() {
                     // no movement
                     if (clicked) {
                         // double click and hold
+                        if(!doubleLongPress){
+                            if(callbacks["doubleClickHold"] != NULL){
+                                callbacks["doubleClickHold"](this->x, this->y);
+                            }
+                            debugPrint("Double click hold detected");
+                            doubleLongPress = true;
+                        }
                     } else {
                         // click and hold
-                        if(callbacks["longPress"] != NULL){
+                        if(!longPress){
+                            if(callbacks["longPress"] != NULL){
                             callbacks["longPress"](this->x, this->y);
+                            }
+                            debugPrint("Long press detected");
+                            longPress = true;
+                            if(clicked) {
+                                // could become double click and hold
+                                debugPrint("double click and hold");
+                            } else {
+                                // could become click and hold
+                                debugPrint("click and hold");
+                            }
                         }
-                        debugPrint("Long press detected");
-                        longPress = true;
+                        
                     }
                 }
             }
@@ -225,6 +243,13 @@ void CST816t_TouchWorker::handleTouch() {
                     }
                     debugPrint("Long press release detected");
                     longPress = false;
+                    if (clicked) {
+                        // could become double click and hold
+                        debugPrint("double click and hold");
+                    } else {
+                        // could become click and hold
+                        debugPrint("click and hold");
+                    }
                 }
             } else {              
                 if (swipe_read) {
@@ -242,14 +267,23 @@ void CST816t_TouchWorker::handleTouch() {
                         // no movement
                         if (clicked) {
                             // double click release
-                            if (callbacks["doubleClickRelease"] != NULL){
-                                gestureCallbackBuffer = callbacks["doubleClickRelease"];
-                                gestureX = last_x;
-                                gestureY = last_y;
-                                // clicked = false;
-                                start = true;
+                            if(doubleLongPress) {
+                                // drag and drop release
+                                if(callbacks["doubleClickHoldRelease"] != NULL){
+                                    callbacks["doubleClickHoldRelease"](this->x, this->y);
+                                }
+                                debugPrint("Double click hold release detected");
+                                doubleLongPress = false;
+                            } else {
+                                if (callbacks["doubleClickRelease"] != NULL){
+                                    gestureCallbackBuffer = callbacks["doubleClickRelease"];
+                                    gestureX = last_x;
+                                    gestureY = last_y;
+                                    // clicked = false;
+                                    start = true;
+                                }
+                                debugPrint("Double click release detected");
                             }
-                            debugPrint("Double click release detected");
                         } else {
                             // click release
                             clicked = true;
