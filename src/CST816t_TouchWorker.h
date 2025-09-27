@@ -28,10 +28,12 @@ public:
     bool setActionFunction(String action, std::function<void(int, int)> callback);
 
 private:
+    bool touch = false;
     bool swipe_read = false;
     bool gesture_timeout = false;
     bool movemnet = true;
     bool clicked = false;
+    bool doubleclicked = false;
     bool start = false;
     bool longPress = false;
     bool doubleLongPress = false;
@@ -132,25 +134,38 @@ void CST816t_TouchWorker::handleTouch() {
 
         gesture_timeout = true;
         start = false;
-        clicked = false;
+        if(clicked) {
+            clicked = false;
+            if(touchpad.available()){
+                // still touching
+                // double click and hold
+                debugPrint("double click and hold");
+                doubleLongPress = true;
+            // } else {
+            //     doubleLongPress = false;
+            }
+        }
     }
 
     if(touchpad.available()){
-        // Serial.println("touch detected");
         setXY(touchpad.x, touchpad.y);
         if (last_x == 0) {
+            // enter touchscreen
             if (clicked) {
                 if (callbacks["doubleClick"] != NULL){
                     callbacks["doubleClick"](this->x, this->y);
                 }
                 debugPrint("Double click detected");
+
             } else {
-                // Serial.println("first touch");
+                // really first touch
                 last_millis = millis();
                 start = true;
                 gesture_timeout = false;
                 swipe_read = false;
                 movemnet = false;
+                doubleLongPress = false;
+
                 if (callbacks["singleClick"] != NULL){
                     callbacks["singleClick"](this->x, this->y);
                 }
@@ -179,14 +194,14 @@ void CST816t_TouchWorker::handleTouch() {
                 } else {
                     // no movement
                     if (clicked) {
-                        // double click and hold
-                        if(!doubleLongPress){
-                            if(callbacks["doubleClickHold"] != NULL){
-                                callbacks["doubleClickHold"](this->x, this->y);
-                            }
-                            debugPrint("Double click hold detected");
-                            doubleLongPress = true;
-                        }
+                        // unreachable clicked after timeout is false
+                        // if(!doubleLongPress){
+                        //     if(callbacks["doubleClickHold"] != NULL){
+                        //         callbacks["doubleClickHold"](this->x, this->y);
+                        //     }
+                        //     debugPrint("Double click hold detected");
+                        //     doubleLongPress = true;
+                        // }
                     } else {
                         // click and hold
                         if(!longPress){
@@ -195,13 +210,7 @@ void CST816t_TouchWorker::handleTouch() {
                             }
                             debugPrint("Long press detected");
                             longPress = true;
-                            if(clicked) {
-                                // could become double click and hold
-                                debugPrint("double click and hold");
-                            } else {
-                                // could become click and hold
-                                debugPrint("click and hold");
-                            }
+
                         }
                         
                     }
@@ -233,7 +242,7 @@ void CST816t_TouchWorker::handleTouch() {
         // Serial.println("no touch");
         if (last_x != 0) {
             // release
-
+            debugPrint("Release X: " + String(this->x) + ", Y: " + String(this->y));
             if (gesture_timeout){
                 // too late for gesture
                 if (longPress) {
@@ -280,7 +289,7 @@ void CST816t_TouchWorker::handleTouch() {
                                     gestureX = last_x;
                                     gestureY = last_y;
                                     // clicked = false;
-                                    start = true;
+                                    // start = true;
                                 }
                                 debugPrint("Double click release detected");
                             }
@@ -291,7 +300,7 @@ void CST816t_TouchWorker::handleTouch() {
                                 gestureCallbackBuffer = callbacks["singleClickRelease"];
                                 gestureX = last_x;
                                 gestureY = last_y;
-                                start = true;
+                                // start = true;
                             }
                             debugPrint("Single click release detected");
                         }
@@ -494,3 +503,17 @@ void CST816t_TouchWorker::checkGesture(){
         break;
     }
 }
+
+
+/* TODO
+[TouchWorker]: Single click detected
+[TouchWorker]: Release X: 76, Y: 299
+[TouchWorker]: Single click release detected
+MouseWorker: Single click release action triggered at X: 76, Y: 299
+[TouchWorker]: Double click detected
+[TouchWorker]: Swipe Down detected
+[TouchWorker]: Release X: 64, Y: 314
+[TouchWorker]: Double click detected
+[TouchWorker]: Release X: 37, Y: 259
+[TouchWorker]: Double click detected
+*/

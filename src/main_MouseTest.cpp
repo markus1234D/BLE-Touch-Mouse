@@ -35,7 +35,7 @@ void setup() {
         // }
     });
 
-    touchWorker.setRotation(CST816t_TouchWorker::USB_LEFT); // Set initial rotation to USB_DOWN
+    touchWorker.setRotation(CST816t_TouchWorker::USB_UP); // Set initial rotation to USB_DOWN
     mouseWorker.setMode(MouseWorker::JOYSTICK_MODE); // Set initial mode to JOYSTICK_MODE
     
     bool success = false;
