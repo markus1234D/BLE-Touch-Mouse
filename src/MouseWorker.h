@@ -84,7 +84,7 @@ void MouseWorker::init() {
         delay(100);
         Keyboard.releaseAll();
     });
-    functionMap["click"] = std::function<void(int, int)>([](int x, int y) {
+    functionMap["LeftClick"] = std::function<void(int, int)>([](int x, int y) {
         Serial.println("MouseWorker: Click action triggered at X: " + String(x) + ", Y: " + String(y));
         Mouse.click(MOUSE_LEFT);
     });

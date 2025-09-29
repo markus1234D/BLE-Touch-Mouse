@@ -1,12 +1,12 @@
 #include <Arduino.h>
 // #include <CST816t_TouchWorker.h>
-// #include <MouseWorker.h>
+#include <MouseWorker.h>
 // #include "GuiWorker.h"
 #include "touchworker_test.h"
 
 TouchWorker_test touchWorker;
 // CST816t_TouchWorker touchWorker;
-// MouseWorker mouseWorker;
+MouseWorker mouseWorker;
 // GuiWorker guiWorker;
 
 void setup() {
@@ -18,7 +18,7 @@ void setup() {
     }
 
     touchWorker.init();
-    // mouseWorker.init();
+    mouseWorker.init();
     // guiWorker.init();
 
     // guiWorker.onFunctionChange([](String item, String action, String function) {
@@ -37,53 +37,32 @@ void setup() {
     // });
 
     touchWorker.setRotation(TouchWorker_test::USB_UP); // Set initial rotation to USB_DOWN
-    // mouseWorker.setMode(MouseWorker::JOYSTICK_MODE); // Set initial mode to JOYSTICK_MODE
-    
-    // bool success = false;
-    // success = touchWorker.setActionFunction("singleClick", mouseWorker.getFunction("setOrigin"));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for singleClick");
-    // }
+    mouseWorker.setMode(MouseWorker::JOYSTICK_MODE); // Set initial mode to JOYSTICK_MODE
+    touchWorker.setMaxGestureTime(300); // Set max gesture time to 800ms
 
-    // success = touchWorker.setActionFunction("singleClickRelease", std::function<void(int, int)>([](int x, int y) {
-    //     Serial.println("MouseWorker: Single click release action triggered at X: " + String(x) + ", Y: " + String(y));
-    // //     mouseWorker.getFunction("click")(x, y);
-    //     mouseWorker.getFunction("resetOrigin")(x, y);
-    // }));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for singleClickRelease");
-    // }
+    touchWorker.setActionFunction("singleClickRelease", std::function<void(int, int)>([](int x, int y) {
+        mouseWorker.getFunction("LeftClick")(x, y);
+    }));
+    touchWorker.setActionFunction("enterScreen", std::function<void(int, int)>([](int x, int y) {
+        Serial.println("Enter screen at X: " + String(x) + ", Y: " + String(y));
+        mouseWorker.getFunction("setOrigin")(x, y);
+    }));
+    touchWorker.setActionFunction("leaveScreen", std::function<void(int, int)>([](int x, int y) {
+        Serial.println("Leave screen at X: " + String(x) + ", Y: " + String(y));
+        mouseWorker.getFunction("resetOrigin")(x, y);
+    }));
+    touchWorker.setActionFunction("doubleClickHold", std::function<void(int, int)>([](int x, int y) {
+        Serial.println("Double click and hold at X: " + String(x) + ", Y: " + String(y));
+        mouseWorker.getFunction("pressLeft")(x, y);
+    }));
+    touchWorker.setActionFunction("doubleClickHoldRelease", std::function<void(int, int)>([](int x, int y) {
+        Serial.println("Double click and hold release at X: " + String(x) + ", Y: " + String(y));
+        mouseWorker.getFunction("releaseLeft")(x, y);
+    }));
+    touchWorker.setActionFunction("noGesture", std::function<void(int, int)>([](int x, int y) {
+        mouseWorker.getFunction("move")(x, y);
+    }));
 
-    // success = touchWorker.setActionFunction("doubleClick", mouseWorker.getFunction("setOrigin"));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for doubleClick");
-    // }
-
-    // success = touchWorker.setActionFunction("doubleClickRelease", std::function<void(int, int)>([](int x, int y) {
-    //     Serial.println("MouseWorker: Double click release action triggered at X: " + String(x) + ", Y: " + String(y));
-    //     mouseWorker.getFunction("click")(x, y);
-    //     mouseWorker.getFunction("resetOrigin")(x, y);
-    // }));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for doubleClickRelease");
-    // }
-
-    // success = touchWorker.setActionFunction("noGesture", mouseWorker.getFunction("move"));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for noGesture");
-    // }
-
-    // // New action functions for drag and drop actions
-    // success = touchWorker.setActionFunction("doubleClickHold", mouseWorker.getFunction("pressLeft"));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for doubleClickHold");
-    // }
-
-    // success = touchWorker.setActionFunction("doubleClickRelease", mouseWorker.getFunction("releaseLeft"));
-    // if (!success) {
-    //     Serial.println("Failed to set action function for doubleClickRelease");
-    // }
-    // Serial.println("BLE Touch Mouse Test - Setup Complete");
 }
 
 void loop() {

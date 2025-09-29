@@ -19,7 +19,7 @@ public:
     void init();
     void setRotation(int rotation) { this->rotation = rotation; }
     void setMaxGestureTime(unsigned long time) { maxGestureTime = time; }
-
+    bool setActionFunction(String action, std::function<void(int, int)> callback);
     void handleTouch();
     
 private:
@@ -43,6 +43,7 @@ private:
     bool doubleClicked = false;
     bool doubleLongPress = false;
     bool available = false;
+    bool movementBeforeTimeout = false;
 
     uint16_t xMin = 0;
     uint16_t xMax = 170;
@@ -94,14 +95,16 @@ void TouchWorker_test::init() {
     this->callbacks["swipeRight"] = NULL;
     this->callbacks["swipeUp"] = NULL;
     this->callbacks["swipeDown"] = NULL;
-    this->callbacks["singleClick"] = NULL;
+    // this->callbacks["singleClick"] = NULL;
+    this->callbacks["enterScreen"] = NULL;
+    this->callbacks["leaveScreen"] = NULL;
     this->callbacks["singleClickRelease"] = NULL;
     this->callbacks["singleClickHold"] = NULL;
+    this->callbacks["singleClickHoldRelease"] = NULL;
     this->callbacks["doubleClick"] = NULL;
     this->callbacks["doubleClickRelease"] = NULL;
     this->callbacks["doubleClickHold"] = NULL;
-    this->callbacks["longPress"] = NULL;
-    this->callbacks["longPressRelease"] = NULL;
+    this->callbacks["doubleClickHoldRelease"] = NULL;
     this->callbacks["noGesture"] = NULL;
 }
 
@@ -277,16 +280,16 @@ void TouchWorker_test::checkGesture(){
             break;
         }
         break;
-    case GESTURE_LONG_PRESS:
-        // Serial.println("LONG PRESS");
-        if(callbacks["longPress"] != NULL){
-            gestureCallbackBuffer = callbacks["longPress"];
-            gestureX = this->x;
-            gestureY = this->y;
-        }
-        break;
+    // case GESTURE_LONG_PRESS:
+    //     // Serial.println("LONG PRESS");
+    //     if(callbacks["longPress"] != NULL){
+    //         gestureCallbackBuffer = callbacks["longPress"];
+    //         gestureX = this->x;
+    //         gestureY = this->y;
+    //     }
+    //     break;
     default:
-        debugPrint("?");
+        debugPrint("no gesture detected");
         break;
     }
 }
@@ -295,10 +298,20 @@ void TouchWorker_test::debugPrint(String str) {
     Serial.println("[TW]: " + str);
 }
 
+bool TouchWorker_test::setActionFunction(String action, std::function<void(int, int)> callback) {
+    if (callbacks.find(action) != callbacks.end()) {
+        callbacks[action] = callback;
+        debugPrint("Action function set: " + action);
+        return true;
+    }
+    debugPrint("Action function not found: " + action);
+    return false;
+}
 
 void TouchWorker_test::handleTouch() {
     
     if(millis() - last_millis > maxGestureTime && !gesture_timeout){
+        // Gesture timeout
         // only enter once
         debugPrint("Gesture timeout");
         gesture_timeout = true;
@@ -306,15 +319,24 @@ void TouchWorker_test::handleTouch() {
         if(clicked && available) {
             debugPrint("doublclick and hold detected");
             doubleLongPress = true;
-
-        } else if (!clicked && available){
+            if (callbacks["doubleClickHold"] != NULL) {
+                callbacks["doubleClickHold"](this->x, this->y);
+            }
+        } else if (!clicked && available && !movementBeforeTimeout) {
             debugPrint("touch and hold");
+            if (callbacks["singleClickHold"] != NULL) {
+                callbacks["singleClickHold"](this->x, this->y);
+            }
         }
         
         clicked = false;
 
         if(!clicked && !doubleLongPress && !available){
             checkGesture();
+            if(gestureCallbackBuffer != NULL){
+                gestureCallbackBuffer(gestureX, gestureY);
+                gestureCallbackBuffer = NULL;
+            }
         }
     }
     
@@ -329,19 +351,34 @@ void TouchWorker_test::handleTouch() {
             if(!clicked){
                 // first touch
                 debugPrint("First touch detected");
+                if(callbacks["enterScreen"] != NULL){
+                    callbacks["enterScreen"](this->x, this->y);
+                }
                 // start to count gesture time
                 last_millis = millis();
                 gesture_timeout = false;
             } else {
-                debugPrint("second touch detected");
+                debugPrint("doubleClick detected");
                 doubleLongPress = true;
+                if (callbacks["doubleClick"] != NULL) {
+                    callbacks["doubleClick"](this->x, this->y);
+                }
             }
-        }
+        } else {
+            if((abs(last_x - x) > 1 || abs(last_y - y) > 1) && !gesture_timeout){
+                // movement detected
+                movementBeforeTimeout = true;
+                // debugPrint("Movement detected before timeout");
+            }    
+        } 
 
         if(gesture_timeout){
             debugPrint("X: " + String(this->x) + ", Y: " + String(this->y));
+            if(callbacks["noGesture"] != NULL){
+                callbacks["noGesture"](this->x, this->y);
+            }
         }
-
+        
         last_x = this->x;
         last_y = this->y;
 
@@ -351,32 +388,48 @@ void TouchWorker_test::handleTouch() {
         if (last_x != 0 || last_y != 0) {
             // touch released
             // debugPrint("Touch released");
-
             if(gesture_timeout){
                 // checkGesture();
                 if (doubleLongPress) {
-                    // Handle double long press
-                    debugPrint("Double long press released after timeout");
+                    debugPrint("doubleClickHoldRelease detected");
                     doubleLongPress = false;
+                    if(callbacks["doubleClickHoldRelease"] != NULL){
+                        callbacks["doubleClickHoldRelease"](this->x, this->y);
+                    }
                 } else{
-                    debugPrint("touch released after timeout");
+                    if(!movementBeforeTimeout){
+                        debugPrint("singleClickHoldRelease detected");
+                        if (callbacks["singleClickHoldRelease"] != NULL) {
+                            callbacks["singleClickHoldRelease"](this->x, this->y);
+                        }
+                    }
+                    // if there was no movement before Timeout, it's a single click and hold
                 }
 
             } else { // not timeout
                 if(doubleLongPress) {
-                    debugPrint("Double long press released before timeout");
+                    debugPrint("doubleClickRelease detected");
                     doubleLongPress = false;
+                    if (callbacks["doubleClickRelease"] != NULL) {
+                        callbacks["doubleClickRelease"](this->x, this->y);
+                    }
                 } else {
-                    debugPrint("Touch released before timeout");
+                    debugPrint("singleClickRelease detected");
                     clicked = true;
+                    if (callbacks["singleClickRelease"] != NULL) {
+                        debugPrint("singleClickRelease");
+                        callbacks["singleClickRelease"](this->x, this->y);
+                    }
                 }
                 
+
             }
-
-
-
+            movementBeforeTimeout = false;
             last_x = 0;
             last_y = 0;
+            if(callbacks["leaveScreen"] != NULL){
+                callbacks["leaveScreen"](this->x, this->y);
+            }
         }
     }
 }
